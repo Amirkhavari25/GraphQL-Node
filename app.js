@@ -4,10 +4,12 @@ const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
 const mongoose = require('mongoose');
 
+const Event = require('./models/event');
+
 const app = express();
 
 
-const events = [];
+
 app.use(bodyParser.json());
 
 
@@ -42,30 +44,46 @@ app.use('/graphAPI', graphqlHTTP({
         }
     `),
     rootValue: {
-        events: () => {
-            return events;
+        events: async () => {
+            try {
+                const events = await Event.find();
+                return events.map(event => ({
+                    ...event._doc,
+                    _id: event.id,
+                    date: event._doc.date.toISOString()
+                }));
+            } catch (err) {
+                console.error("Error fetching events:", err);
+                throw err;
+            }
         },
 
-        createEvent: (args) => {
-            const event = {
-                _id: events.length + 1,
+        createEvent: async (args) => {
+            const event = new Event({
                 title: args.eventInput.title,
                 description: args.eventInput.description,
-                date: new Date().toISOString(),
+                date: new Date(),
                 price: +args.eventInput.price
+            });
+            try {
+                const result = await event.save();
+                return {
+                    ...result._doc,
+                    _id: result.id,
+                    date: result._doc.date.toISOString()
+                };
+            } catch (err) {
+                console.error(err);
+                throw err;
             }
-            events.push(event);
-            console.log(events);
-            return event;
         }
     },
     graphiql: true,
 }))
-console.log(events);
 
-mongoose.connect('mongodb://127.0.0.1:27017/mydatabase')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('Connection failed', err));
+mongoose.connect('mongodb://127.0.0.1:27017/GraphQl_DB')
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.error('Connection failed', err));
 
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
