@@ -12,7 +12,31 @@ const app = express();
 
 app.use(bodyParser.json());
 
+const getEvents = async (eventIds) => {
+    try {
+        const events = await Event.find({ _id: { $in: eventIds } });
+        if (!events) {
+            return null;
+        }
+        return events.map(event => {
+            return { ...event._doc, _id: event.id, creator: findUserById.bind(this, event._doc.creator) };
+        });
+    } catch (err) {
+        throw err;
+    }
+}
 
+const findUserById = async (userId) => {
+    try {
+        const result = await User.findById(userId);
+        if (!result) {
+            throw new Error('User not found');
+        }
+        return { ...result._doc, _id: result.id, password: null, createdEvent: getEvents.bind(this, result._doc.createdEvent) };
+    } catch (err) {
+        throw err;
+    }
+}
 
 app.use('/graphAPI', graphqlHTTP({
     schema: buildSchema(`
@@ -22,11 +46,14 @@ app.use('/graphAPI', graphqlHTTP({
             description:String!
             date:String!
             price : Float!
+            creator : User!
         }
+
         type User{
             _id :ID!
             email:String!
             password:String
+            createdEvent : [Event!]
         }
 
         input EventInput{
@@ -61,7 +88,8 @@ app.use('/graphAPI', graphqlHTTP({
                 return events.map(event => ({
                     ...event._doc,
                     _id: event.id,
-                    date: event._doc.date.toISOString()
+                    date: event._doc.date.toISOString(),
+                    creator: findUserById.bind(this, event.creator),
                 }));
             } catch (err) {
                 console.error("Error fetching events:", err);
