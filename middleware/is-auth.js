@@ -6,7 +6,7 @@ module.exports = (req, res, next) => {
     req.isAuth = false;
     return next();
   }
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(' ')[0];
   if (!token || token === '') {
     req.isAuth = false;
     return next();
