@@ -2,18 +2,25 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { graphqlHTTP } = require('express-graphql');
 const mongoose = require('mongoose');
-const graphSchema = require('./graphQl/schema/index');
-const graphResolver = require('./graphQl/resolvers/index');
+
+const graphQlSchema = require('./graphql/schema/index');
+const graphQlResolvers = require('./graphql/resolvers/index');
+const isAuth = require('./middleware/is-auth');
 
 const app = express();
 
 app.use(bodyParser.json());
 
-app.use('/graphAPI', graphqlHTTP({
-    schema: graphSchema,
-    rootValue: graphResolver,
-    graphiql: true,
-}))
+app.use(isAuth);
+
+app.use(
+  '/graphql',
+  graphqlHttp({
+    schema: graphQlSchema,
+    rootValue: graphQlResolvers,
+    graphiql: true
+  })
+);
 
 mongoose.connect('mongodb://127.0.0.1:27017/GraphQl_DB')
     .then(() => console.log('Connected to MongoDB'))
